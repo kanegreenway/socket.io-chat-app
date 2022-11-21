@@ -1,31 +1,33 @@
-const path=require("path");
-const http=require("http");
-const express=require('express');
-const socketio=require('socket.io');
+const app = require("express")();
+const http = require("http").createServer(app);
 
+const io = require("socket.io")(http);
 
+var players = {};
 
-const app=express();
-const server=http.createServer(app);
-const io=socketio(server);
+app.get("/", (req, res) => {
+  res.sendFile(__dirname + "/public/index.html");
+});
 
+io.on("connection", (socket) => {
+  console.log(`User ${socket.id} connected`);
+  players[socket.id] = { id: socket.id, object: {} };
 
-const port=process.env.PORT || 3000;
-const publicDirectoryPath=path.join(__dirname,"/public");
-
-app.use(express.static(publicDirectoryPath));
-
-
-io.on("connection",(client)=>{
-    console.log('New websocket connection');
- client.on('messageFromClient', msg => {
-    io.emit('messageFromServer', msg);
+  socket.on("disconnect", (reason) => {
+    console.log(`User ${socket.id} disconnected`);
+    delete players[socket.id];
   });
-   client.on('disconnect', () => {
-    console.log('New websocket disconnected');
-  });
-})
 
-server.listen(port,()=>{
-    console.log(`Server is up on port ${port}!`);
-})
+  // Main script //
+  socket.on("senddata", (data) => {
+    players[socket.id].object = data;
+  });
+});
+
+setInterval(() => {
+  io.emit("playerdata", players);
+}, 10);
+
+http.listen(8080, () => {
+  console.log("listening on *:8080");
+});
