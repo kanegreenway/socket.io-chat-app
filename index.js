@@ -1,5 +1,6 @@
 const app = require("express")();
 const http = require("http").createServer(app);
+const port = process.env.port || 8080
 
 const io = require("socket.io")(http);
 
@@ -28,6 +29,6 @@ setInterval(() => {
   io.emit("playerdata", players);
 }, 10);
 
-http.listen(8080, () => {
-  console.log("listening on *:8080");
+http.listen(port, () => {
+  console.log(`listening on port ${port}`);
 });
