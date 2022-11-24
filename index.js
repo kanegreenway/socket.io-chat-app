@@ -12,7 +12,7 @@ app.get("/", (req, res) => {
 
 io.on("connection", (socket) => {
   console.log(`User ${socket.id} connected`);
-  players[socket.id] = { id: socket.id, objectLoc: {}, objectRot: {} };
+  players[socket.id] = { id: socket.id, objectColour: 0x6b6b6b, objectLoc: {}, objectRot: {} };
 
   socket.on("disconnect", (reason) => {
     console.log(`User ${socket.id} disconnected`);
@@ -22,18 +22,15 @@ io.on("connection", (socket) => {
   // Main script //
   socket.on("sendPositionData", (data) => {
     players[socket.id].objectLoc = data;
-    //players[socket.id].object = 30;
-    //console.log(data);
   });
 
   socket.on("sendRotationData", (data2) => {
     players[socket.id].objectRot = data2;
-    //players[socket.id].object = data2;
-    //players[socket.id].object = data;
-    console.log(data2);
-    
   });
 
+  socket.on("sendColourData", (data3) => {
+    players[socket.id].objectColour = data3;
+  });
   
 });
 
