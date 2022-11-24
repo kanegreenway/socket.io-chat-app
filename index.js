@@ -12,7 +12,7 @@ app.get("/", (req, res) => {
 
 io.on("connection", (socket) => {
     console.log(`User ${socket.id} connected`);
-    players[socket.id] = { id: socket.id, avatarColour: 0x6b6b6b, avatarPosition: {}, avatarRotation: {} };
+    players[socket.id] = { id: socket.id, avatarColour: 0x6b6b6b, avatarShape: "Rhombus", avatarPosition: {}, avatarRotation: {} };
 
     socket.on("disconnect", (reason) => {
         console.log(`User ${socket.id} disconnected`);
@@ -20,10 +20,11 @@ io.on("connection", (socket) => {
     });
 
     // Main script //
-    socket.on("sendClientData", (playerAvatarObjectPosition, playerCameraObjectRotation, playerAvatarColour) => {
+    socket.on("sendClientData", (playerAvatarObjectPosition, playerCameraObjectRotation, playerAvatarColour, playerAvatarShape) => {
         players[socket.id].avatarPosition = playerAvatarObjectPosition;
         players[socket.id].avatarRotation = playerCameraObjectRotation;
         players[socket.id].avatarColour = playerAvatarColour;
+        players[socket.id].avatarShape = playerAvatarShape;
     });
 
     socket.on("sendPositionData", (data) => {

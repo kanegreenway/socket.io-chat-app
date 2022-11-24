@@ -90,6 +90,9 @@
             var rngColourList = [0xff0000, 0xffdd00, 0x04ff00, 0x00ffe5, 0x002fff, 0x8400ff, 0xff00dd]
             var playerColour = rngColourList[Math.floor(Math.random() * 8)];
 
+            var rngShapeList = ["Rhombus", "Semicircle"];
+            var playerShape = rngShapeList[Math.floor(Math.random() * 2)];
+
             var playermesh = new THREE.BoxGeometry(10, 10, 10);
             var playermat = new THREE.MeshLambertMaterial({ color: playerColour });
             var playerObj = new THREE.Mesh(playermesh, playermat);
@@ -98,28 +101,82 @@
 
             // Player Features //
 
-            var eyeMesh = new THREE.SphereGeometry(1.5, 15, 15);
+            
+
+            // Create dummy // Rhombus
+            const rhombusShape = new THREE.Shape();
+            const x = 0;
+            const y = 0;
+            rhombusShape.moveTo(x, y);
+            rhombusShape.lineTo(x + 15, y - 0);
+            rhombusShape.lineTo(x + 12, y + 10);
+            rhombusShape.lineTo(x - 3, y + 10);
+
+            const extrudeSettings = {
+                steps: 3,
+                depth: 3,
+                bevelEnabled: true,
+                bevelThickness: 0.2,
+                bevelSize: 0.2,
+                bevelSegments: 4,
+            };
+
+            const rhombusGeometry = new THREE.ExtrudeGeometry(rhombusShape, extrudeSettings);
+            var testMat = new THREE.MeshLambertMaterial({ color: 0xff7700 });
+            var rhombusAvatar = new THREE.Mesh(rhombusGeometry, testMat);
+            rhombusAvatar.geometry.center();
+            //scene.add(rhombusAvatar);
+
             var eyeMat = new THREE.MeshLambertMaterial({ color: 0xffffff });
-            var leftEye = new THREE.Mesh(eyeMesh, eyeMat);
-            playerObj.add(leftEye);
-            leftEye.position.set(-2, 1.5, -5);
-            var eyePupilMesh = new THREE.SphereGeometry(0.6, 12, 12);
             var eyePupilMat = new THREE.MeshLambertMaterial({ color: 0x000000 });
-            var leftEyePupil = new THREE.Mesh(eyePupilMesh, eyePupilMat);
-            leftEye.add(leftEyePupil);
-            leftEyePupil.position.set(0, 0, -1.2);
 
-            var rightEye = new THREE.Mesh(eyeMesh, eyeMat);
-            playerObj.add(rightEye);
-            rightEye.position.set(2, 1.5, -5);
-            var rightEyePupil = new THREE.Mesh(eyePupilMesh, eyePupilMat);
-            rightEye.add(rightEyePupil);
-            rightEyePupil.position.set(0, 0, -1.2);
+            var eyeMesh = new THREE.CylinderGeometry( 1.8, 1.8, 1, 32 );
+            var pupilMesh = new THREE.CylinderGeometry( 1, 1, 1, 32 );
 
-            // Create dummy //
-            var enemy = new THREE.Mesh(playermesh, playermat);
-            enemy.position.x = 50;
-            //scene.add(enemy);
+            var leftEye = new THREE.Mesh( eyeMesh, eyeMat );
+            var leftPupil = new THREE.Mesh( pupilMesh, eyePupilMat );
+            rhombusAvatar.add( leftEye );
+            leftEye.position.set(2.2, 1.5, -1.4)
+            leftEye.rotateX( Math.PI / 2 );
+            leftEye.add( leftPupil );
+            leftPupil.position.set(0, -0.1, 0);
+
+            var rightEye = new THREE.Mesh( eyeMesh, eyeMat );
+            var rightPupil = new THREE.Mesh( pupilMesh, eyePupilMat );
+            rhombusAvatar.add( rightEye );
+            rightEye.position.set(-2.2, 1.5, -1.4)
+            rightEye.rotateX( Math.PI / 2 );
+            rightEye.add( rightPupil );
+            rightPupil.position.set(0, -0.1, 0);
+
+            // Create Dummy // Semi-Circle
+
+            const semiCircleShape = new THREE.Shape();
+            semiCircleShape.moveTo(x, y);
+            semiCircleShape.arc(0, 0, 1, 3.2, 0, 2.0 * Math.PI, false);
+
+            const semiCircleGeometry = new THREE.ExtrudeGeometry(semiCircleShape, extrudeSettings);
+            var semiCircleAvatar = new THREE.Mesh(semiCircleGeometry, testMat);
+            semiCircleAvatar.geometry.center();
+            semiCircleAvatar.scale.set(5, 5, 1);
+            //scene.add(semiCircleAvatar);
+
+            leftEye = new THREE.Mesh( eyeMesh, eyeMat );
+            leftPupil = new THREE.Mesh( pupilMesh, eyePupilMat );
+            //scene.add( leftEye );
+            leftEye.position.set(2.2, 1, -1.4)
+            leftEye.rotateX( Math.PI / 2 );
+            leftEye.add( leftPupil );
+            leftPupil.position.set(0, -0.1, 0);
+
+            rightEye = new THREE.Mesh( eyeMesh, eyeMat );
+            rightPupil = new THREE.Mesh( pupilMesh, eyePupilMat );
+            //scene.add( rightEye );
+            rightEye.position.set(-2.2, 1, -1.4)
+            rightEye.rotateX( Math.PI / 2 );
+            rightEye.add( rightPupil );
+            rightPupil.position.set(0, -0.1, 0);
+
 
             // Create light //
             var light = new THREE.PointLight(0xffffff);
@@ -263,40 +320,66 @@
 
                 var newplayermat = new THREE.MeshLambertMaterial({ color: value.avatarColour });
 
-                let temp = new THREE.Mesh(playermesh, newplayermat);
+                let otherAvatar;
 
-                console.log(value.avatar);
+                if (value.avatarShape == "Rhombus") {
+                    otherAvatar = new THREE.Mesh(rhombusGeometry, newplayermat);
 
-                temp.position.x = value.avatarPosition.x;
-                temp.position.y = value.avatarPosition.y;
-                temp.position.z = value.avatarPosition.z;
+                    var leftEye = new THREE.Mesh( eyeMesh, eyeMat );
+                    var leftPupil = new THREE.Mesh( pupilMesh, eyePupilMat );
+                    otherAvatar.add( leftEye );
+                    leftEye.position.set(2.2, 2, -1.4)
+                    leftEye.rotateX( Math.PI / 2 );
+                    leftEye.add( leftPupil );
+                    leftPupil.position.set(0, -0.1, 0);
+
+                    var rightEye = new THREE.Mesh( eyeMesh, eyeMat );
+                    var rightPupil = new THREE.Mesh( pupilMesh, eyePupilMat );
+                    otherAvatar.add( rightEye );
+                    rightEye.position.set(-2.2, 2, -1.4)
+                    rightEye.rotateX( Math.PI / 2 );
+                    rightEye.add( rightPupil );
+                    rightPupil.position.set(0, -0.1, 0);
+                } else {
+                    otherAvatar = new THREE.Mesh(semiCircleGeometry, newplayermat);
+                    otherAvatar.scale.set(5, 5, 1);
+
+                    var leftEye = new THREE.Mesh( eyeMesh, eyeMat );
+                    var leftPupil = new THREE.Mesh( pupilMesh, eyePupilMat );
+                    otherAvatar.add( leftEye );
+                    leftEye.position.set(0.5, 0.2, -2)
+                    leftEye.rotateX( Math.PI / 2 );
+                    leftEye.add( leftPupil );
+                    leftPupil.position.set(0, -0.1, 0);
+                    leftEye.scale.set(1 / 5, 1 / 5, 1 / 5);
+
+                    var rightEye = new THREE.Mesh( eyeMesh, eyeMat );
+                    var rightPupil = new THREE.Mesh( pupilMesh, eyePupilMat );
+                    otherAvatar.add( rightEye );
+                    rightEye.position.set(-0.5, 0.2, -2)
+                    rightEye.rotateX( Math.PI / 2 );
+                    rightEye.add( rightPupil );
+                    rightPupil.position.set(0, -0.1, 0);
+                    rightEye.scale.set(1 / 5, 1 / 5, 1 / 5);
+                }
+                //let otherAvatar = new THREE.Mesh(rhombusGeometry, newplayermat);
+
+                //let temp = new THREE.ExtrudeBufferGeometry(shape, extrudeSettings);
+
+                //console.log(value.avatar);
+
+                otherAvatar.position.x = value.avatarPosition.x;
+                otherAvatar.position.y = value.avatarPosition.y;
+                otherAvatar.position.z = value.avatarPosition.z;
                 
-                temp.rotation.order = "YXZ"
-                temp.rotation.set(value.avatarRotation._x, value.avatarRotation._y ,value.avatarRotation._z);
+                otherAvatar.rotation.order = "YXZ"
+                otherAvatar.rotation.set(value.avatarRotation._x, value.avatarRotation._y ,value.avatarRotation._z);
 
-                // nEW //
-
-                var leftEye = new THREE.Mesh(eyeMesh, eyeMat);
-                temp.add(leftEye);
-                leftEye.position.set(-2, 1.5, -5);
-                var leftEyePupil = new THREE.Mesh(eyePupilMesh, eyePupilMat);
-                leftEye.add(leftEyePupil);
-                leftEyePupil.position.set(0, 0, -1.2);
-
-                var rightEye = new THREE.Mesh(eyeMesh, eyeMat);
-                temp.add(rightEye);
-                rightEye.position.set(2, 1.5, -5);
-                var rightEyePupil = new THREE.Mesh(eyePupilMesh, eyePupilMat);
-                rightEye.add(rightEyePupil);
-                rightEyePupil.position.set(0, 0, -1.2);
-
-                // end new//
-
-                objList.push(temp);
+                objList.push(otherAvatar);
                 scene.add(objList[objList.length-1]);
                 }
                 
-                socket.emit("sendClientData", playerObj.position, camera.rotation, playerColour);
+                socket.emit("sendClientData", playerObj.position, camera.rotation, playerColour, playerShape);
                 //socket.emit("sendPositionData", playerObj.position);
                 //socket.emit("sendRotationData", camera.rotation);
                 //socket.emit("sendColourData", playerColour);
