@@ -94,7 +94,7 @@
       // Create dummy //
       var enemy = new THREE.Mesh(playermesh, playermat);
       enemy.position.x = 50;
-      scene.add(enemy);
+      //scene.add(enemy);
 
       // Create light //
       var light = new THREE.PointLight(0xffffff);
@@ -237,15 +237,19 @@
         for (const [key, value] of Object.entries(data)) { if (key !== socket.id) {
           let temp = new THREE.Mesh(playermesh, playermat);
 
-          temp.position.x = value.object.x;
-          temp.position.y = value.object.y;
-          temp.position.z = value.object.z;
+          temp.position.x = value.objectLoc.x;
+          temp.position.y = value.objectLoc.y;
+          temp.position.z = value.objectLoc.z;
+        
+          
+          temp.rotation.set(value.objectRot._x, value.objectRot._y ,value.objectRot._z);
 
           objList.push(temp);
           scene.add(objList[objList.length-1]);
         }
 
-        socket.emit("senddata", playerObj.position);
+        socket.emit("sendPositionData", playerObj.position);
+        socket.emit("sendRotationData", playerObj.rotation);
       }});
     </script>
   </body>
