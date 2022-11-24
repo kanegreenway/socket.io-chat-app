@@ -1,48 +1,306 @@
 <!DOCTYPE html>
-<html>
-  <head>
-    <title>Socket.IO chat</title>
-    <style>
-      body { margin: 0; padding-bottom: 3rem; font-family: Helvetica, Arial, sans-serif; }
 
-      #form { background: rgba(0, 0, 0, 0.15); padding: 0.25rem; position: fixed; bottom: 0; left: 0; right: 0; display: flex; height: 3rem; box-sizing: border-box; backdrop-filter: blur(10px); }
-      #input { border: none; padding: 0 1rem; flex-grow: 1; border-radius: 2rem; margin: 0.25rem; }
-      #input:focus { outline: none; }
-      #form > button { background: #333; border: none; padding: 0 1rem; margin: 0.25rem; border-radius: 3px; outline: none; color: #fff; }
+<html lang="en">
+    <head>
+        <meta charset="utf-8" />
+        <title>WebGL Demo</title>
 
-      #messages { list-style-type: none; margin: 0; padding: 0; }
-      #messages > li { padding: 0.5rem 1rem; }
-      #messages > li:nth-child(odd) { background: #efefef; }
-    </style>
-  </head>
-  <body>
-    <ul id="messages"></ul>
-    <form id="form" action="">
-      <input id="input" placeholder="Say Something..." autocomplete="off" /><button>Send</button>
-    </form>
-    <script src="/socket.io/socket.io.js"></script>
+        <style>
+            body {
+                margin: 0;
+                padding: 0;
+            }
+            canvas {
+                width: 100%;
+                height: 100%;
+            }
+        </style>
 
-    <script>
-      var socket = io();
+        <script src="https://cdn.rawgit.com/mrdoob/three.js/master/build/three.min.js"></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/2.3.0/socket.io.js"></script>
+    </head>
 
-      var messages = document.getElementById('messages');
-      var form = document.getElementById('form');
-      var input = document.getElementById('input');
+    <body>
+        <script>
+            // Keyboard Input //
+            var keys = [];
+            var shift = false;
 
-      form.addEventListener('submit', function(e) {
-        e.preventDefault();
-        if (input.value != "") {
-          socket.emit('messageFromClient', input.value);
-          input.value = '';
-        }
-      });
+            document.addEventListener("keydown", (event) => {
+                if (!keys.includes(event.key)) {
+                keys.push(event.key);
+                }
+                shift = event.shiftKey;
+            });
 
-      socket.on('messageFromServer', function(msg) {
-        var item = document.createElement('li');
-        item.textContent = msg;
-        messages.appendChild(item);
-        window.scrollTo(0, document.body.scrollHeight);
-      });
-    </script>
-  </body>
+            document.addEventListener("keyup", (event) => {
+                for (var i = 0; i < keys.length; i++) {
+                if (keys[i] == event.key) {
+                    keys.splice(i, 1);
+                }
+                }
+            });
+        </script>
+
+        <script>
+            // Main script //
+            var WIDTH = window.innerWidth;
+            var HEIGHT = window.innerHeight;
+
+            // Setup networking //
+            var socket = io();
+            var userlist = {};
+
+            var objList = [];
+
+            // Setup WebGL //
+            var renderer = new THREE.WebGLRenderer({ antialias: true });
+            renderer.setSize(WIDTH, HEIGHT);
+            renderer.setClearColor(0x8cd3f5, 1);
+            document.body.appendChild(renderer.domElement);
+
+            // Create scene //
+            var scene = new THREE.Scene();
+
+            // Create camera //
+            var camera = new THREE.PerspectiveCamera(70, WIDTH / HEIGHT);
+            camera.position.z = 50;
+            camera.rotation.order = "YXZ";
+            scene.add(camera);
+
+            // Spinning cube
+            var basicMaterial = new THREE.MeshLambertMaterial({ color: 0x0095dd });
+            var cube = new THREE.Mesh(
+                new THREE.BoxGeometry(10, 10, 10),
+                basicMaterial
+            );
+            //scene.add(cube);
+            cube.rotation.set(0, 0, 0);
+
+            // Floor
+            var floor = new THREE.Mesh(
+                new THREE.BoxGeometry(500, 5, 500),
+                new THREE.MeshLambertMaterial({ color: 0xdfdfdf })
+            );
+            scene.add(floor);
+
+            floor.position.y = -15;
+
+            // Create player //
+            var rngColourList = [0xff0000, 0xffdd00, 0x04ff00, 0x00ffe5, 0x002fff, 0x8400ff, 0xff00dd]
+            var playerColour = rngColourList[Math.floor(Math.random() * 8)];
+
+            var playermesh = new THREE.BoxGeometry(10, 10, 10);
+            var playermat = new THREE.MeshLambertMaterial({ color: playerColour });
+            var playerObj = new THREE.Mesh(playermesh, playermat);
+            playerObj.visible = false;
+            scene.add(playerObj);
+
+            // Player Features //
+
+            var eyeMesh = new THREE.SphereGeometry(1.5, 15, 15);
+            var eyeMat = new THREE.MeshLambertMaterial({ color: 0xffffff });
+            var leftEye = new THREE.Mesh(eyeMesh, eyeMat);
+            playerObj.add(leftEye);
+            leftEye.position.set(-2, 1.5, -5);
+            var eyePupilMesh = new THREE.SphereGeometry(0.6, 12, 12);
+            var eyePupilMat = new THREE.MeshLambertMaterial({ color: 0x000000 });
+            var leftEyePupil = new THREE.Mesh(eyePupilMesh, eyePupilMat);
+            leftEye.add(leftEyePupil);
+            leftEyePupil.position.set(0, 0, -1.2);
+
+            var rightEye = new THREE.Mesh(eyeMesh, eyeMat);
+            playerObj.add(rightEye);
+            rightEye.position.set(2, 1.5, -5);
+            var rightEyePupil = new THREE.Mesh(eyePupilMesh, eyePupilMat);
+            rightEye.add(rightEyePupil);
+            rightEyePupil.position.set(0, 0, -1.2);
+
+            // Create dummy //
+            var enemy = new THREE.Mesh(playermesh, playermat);
+            enemy.position.x = 50;
+            //scene.add(enemy);
+
+            // Create light //
+            var light = new THREE.PointLight(0xffffff);
+            light.position.set(100, 200, 200);
+            scene.add(light);
+
+            const amb_light = new THREE.AmbientLight(0x404040);
+            scene.add(amb_light);
+
+            let sensitivity = 1;
+            let t = 0;
+
+            var bullets = [];
+
+            // Main loop //
+            function loop() {
+                t += 0.01;
+
+                cube.rotation.x = t * 8;
+                cube.rotation.y = t * 8;
+
+                for (let i = 0; i < bullets.length; i++) {
+                bullets[i].translateZ(-5);
+
+                let distance = Math.sqrt(
+                    Math.pow(bullets[i].position.x, 2) +
+                    Math.pow(bullets[i].position.y, 2) +
+                    Math.pow(bullets[i].position.z, 2)
+                );
+
+                if (distance > 500) {
+                    scene.remove(bullets[i]);
+                    bullets.splice(i, 1);
+                    if (!(i < bullets.length)) {
+                    break;
+                    }
+                }
+
+                if (
+                    bullets[i].position.x > enemy.position.x - 4 &&
+                    bullets[i].position.y > enemy.position.y - 9 &&
+                    bullets[i].position.z > enemy.position.z - 4 &&
+                    bullets[i].position.x < enemy.position.x + 4 &&
+                    bullets[i].position.y < enemy.position.y + 9 &&
+                    bullets[i].position.z < enemy.position.z + 4
+                ) {
+                    scene.remove(enemy);
+
+                    scene.remove(bullets[i]);
+                    bullets.splice(i, 1);
+                    if (!(i < bullets.length)) {
+                    break;
+                    }
+                }
+                }
+
+                let shiftboost = 0; //shift === true ? 1 : 0;
+
+                if (keys.includes("a")) {
+                playerObj.translateX(-1 - shiftboost);
+                }
+                if (keys.includes("d")) {
+                playerObj.translateX(1 + shiftboost);
+                }
+
+                if (keys.includes("w")) {
+                playerObj.translateZ(-1 - shiftboost);
+                }
+                if (keys.includes("s")) {
+                playerObj.translateZ(0.5);
+                }
+
+                camera.position.x = playerObj.position.x;
+                camera.position.y = playerObj.position.y + 5;
+                camera.position.z = playerObj.position.z;
+
+                //playerObj.rotation.x = camera.rotation.x;
+                camera.rotation.y = playerObj.rotation.y;
+
+                requestAnimationFrame(loop);
+                renderer.render(scene, camera);
+            }
+
+            loop();
+
+            // Clamp function //
+            function clamp(num, min, max) {
+                return Math.min(Math.max(num, min), max);
+            }
+
+            // Input //
+            var mouse = { x: 0, y: 0 };
+
+            document.addEventListener("mousedown", (event) => {
+                if (document.pointerLockElement !== renderer.domElement) {
+                renderer.domElement.requestPointerLock();
+                } else {
+                bullets.push(
+                    new THREE.Mesh(
+                    new THREE.SphereGeometry(2, 32, 32),
+                    new THREE.MeshLambertMaterial({ color: 0xdfdfdf })
+                    )
+                );
+
+                bullets[bullets.length - 1].rotation.order = "YXZ";
+
+                bullets[bullets.length - 1].position.x = camera.position.x;
+                bullets[bullets.length - 1].position.y = camera.position.y;
+                bullets[bullets.length - 1].position.z = camera.position.z;
+
+                bullets[bullets.length - 1].rotation.x = camera.rotation.x;
+                bullets[bullets.length - 1].rotation.y = playerObj.rotation.y;
+                bullets[bullets.length - 1].rotation.z = playerObj.rotation.z;
+
+                scene.add(bullets[bullets.length - 1]);
+                }
+            });
+
+            // Mouse movement without pointer lock
+            document.addEventListener("mousemove", (event) => {
+                camera.rotation.x += -event.movementY / 100;
+
+                camera.rotation.x = clamp(
+                camera.rotation.x,
+                (-90 * Math.PI) / 180,
+                (90 * Math.PI) / 180
+                );
+
+                playerObj.rotation.y += -event.movementX / 100;
+            });
+
+            socket.on("playerdata", (data) => {
+                userlist = data;
+
+                for (let i = 0; i < objList.length; i++) {
+                scene.remove(objList[i]);
+                }
+                objList = [];
+
+                for (const [key, value] of Object.entries(data)) { if (key !== socket.id) {
+
+                var newplayermat = new THREE.MeshLambertMaterial({ color: value.avatarColour });
+
+                let temp = new THREE.Mesh(playermesh, newplayermat);
+
+                console.log(value.avatar);
+
+                temp.position.x = value.avatarPosition.x;
+                temp.position.y = value.avatarPosition.y;
+                temp.position.z = value.avatarPosition.z;
+                
+                temp.rotation.order = "YXZ"
+                temp.rotation.set(value.avatarRotation._x, value.avatarRotation._y ,value.avatarRotation._z);
+
+                // nEW //
+
+                var leftEye = new THREE.Mesh(eyeMesh, eyeMat);
+                temp.add(leftEye);
+                leftEye.position.set(-2, 1.5, -5);
+                var leftEyePupil = new THREE.Mesh(eyePupilMesh, eyePupilMat);
+                leftEye.add(leftEyePupil);
+                leftEyePupil.position.set(0, 0, -1.2);
+
+                var rightEye = new THREE.Mesh(eyeMesh, eyeMat);
+                temp.add(rightEye);
+                rightEye.position.set(2, 1.5, -5);
+                var rightEyePupil = new THREE.Mesh(eyePupilMesh, eyePupilMat);
+                rightEye.add(rightEyePupil);
+                rightEyePupil.position.set(0, 0, -1.2);
+
+                // end new//
+
+                objList.push(temp);
+                scene.add(objList[objList.length-1]);
+                }
+                
+                socket.emit("sendClientData", playerObj.position, camera.rotation, playerColour);
+                //socket.emit("sendPositionData", playerObj.position);
+                //socket.emit("sendRotationData", camera.rotation);
+                //socket.emit("sendColourData", playerColour);
+            }});
+        </script>
+    </body>
 </html>

@@ -1,31 +1,48 @@
-const path=require("path");
-const http=require("http");
-const express=require('express');
-const socketio=require('socket.io');
+const app = require("express")();
+const http = require("http").createServer(app);
+const port = process.env.PORT || 8080
 
+const io = require("socket.io")(http);
 
+var players = {};
 
-const app=express();
-const server=http.createServer(app);
-const io=socketio(server);
+app.get("/", (req, res) => {
+    res.sendFile(__dirname + "/public/index.html");
+});
 
+io.on("connection", (socket) => {
+    console.log(`User ${socket.id} connected`);
+    players[socket.id] = { id: socket.id, avatarColour: 0x6b6b6b, avatarPosition: {}, avatarRotation: {} };
 
-const port=process.env.PORT || 3000;
-const publicDirectoryPath=path.join(__dirname,"/public");
+    socket.on("disconnect", (reason) => {
+        console.log(`User ${socket.id} disconnected`);
+        delete players[socket.id];
+    });
 
-app.use(express.static(publicDirectoryPath));
+    // Main script //
+    socket.on("sendClientData", (playerAvatarObjectPosition, playerCameraObjectRotation, playerAvatarColour) => {
+        players[socket.id].avatarPosition = playerAvatarObjectPosition;
+        players[socket.id].avatarRotation = playerCameraObjectRotation;
+        players[socket.id].avatarColour = playerAvatarColour;
+    });
 
+    socket.on("sendPositionData", (data) => {
+        players[socket.id].objectLoc = data;
+    });
 
-io.on("connection",(client)=>{
-    console.log('New websocket connection');
- client.on('messageFromClient', msg => {
-    io.emit('messageFromServer', msg);
-  });
-   client.on('disconnect', () => {
-    console.log('New websocket disconnected');
-  });
-})
+    socket.on("sendRotationData", (data2) => {
+        players[socket.id].objectRot = data2;
+    });
 
-server.listen(port,()=>{
-    console.log(`Server is up on port ${port}!`);
-})
+    socket.on("sendColourData", (data3) => {
+        players[socket.id].objectColour = data3;
+    });
+});
+
+setInterval(() => {
+    io.emit("playerdata", players);
+}, 10);
+
+http.listen(port, () => {
+    console.log(`listening on port ${port}`);
+});
